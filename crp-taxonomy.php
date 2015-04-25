@@ -9,13 +9,13 @@
  * @author		Ajay D'Souza <me@ajaydsouza.com>
  * @license		GPL-2.0+
  * @link		http://ajaydsouza.com
- * @copyright	2014 Ajay D'Souza
+ * @copyright 	2014-2015 Ajay D'Souza
  *
  * @wordpress-plugin
  * Plugin Name: Contextual Related Posts Taxonomy Extender
  * Plugin URI: http://ajaydsouza.com/wordpress/plugins/crp-taxonomy/
  * Description: Adds new settings to Contextual Related Posts that allows you to restrict posts to the category or tag of the current post
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Ajay D'Souza
  * Author URI: http://ajaydsouza.com
  * Text Domain: crp-taxonomy
@@ -89,6 +89,10 @@ function crpt_crp_posts_where( $where ) {
 		$taxonomies[] = 'post_tag';
 	}
 
+	if ( $crp_settings['crpt_taxes'] ) {
+		$taxonomies = array_merge( $taxonomies, explode( ",", $crp_settings['crpt_taxes'] ) );
+	}
+
 	$terms = wp_get_object_terms( $post->ID, $taxonomies );
 	$term_ids = wp_list_pluck( $terms, 'term_id' );
 
@@ -102,6 +106,35 @@ function crpt_crp_posts_where( $where ) {
 }
 add_filter( 'crp_posts_where', 'crpt_crp_posts_where' );
 
+
+/**
+ * Add options to CRP Settings array.
+ *
+ * @since 1.1.0
+ *
+ * @param	array	$crp_settings	CRP Settings
+ * @return	array	Filtered array of CRP Settings
+ */
+function crpt_crp_posts_match( $match, $stuff, $postid ) {
+	global $crp_settings;
+
+	$post_type = get_post_type( $postid );
+
+	if ( $crp_settings['crpt_disable_contextual'] ) {
+
+		/* If post or page and we're not disabling custom post types */
+		if ( ( 'post' == $post_type || 'page' == $post_type ) && ( $crp_settings['crpt_disable_contextual_cpt'] ) ) {
+			return $match;
+		}
+
+		return ' ';
+
+	}
+
+	return $match;
+
+}
+add_filter( 'crp_posts_match', 'crpt_crp_posts_match', 10, 3 );
 
 
 /**
@@ -117,6 +150,9 @@ function crpt_crp_default_options( $crp_settings ) {
 	$more_options = array(
 		'crpt_tag' => false,		// Restrict to current post's tags
 		'crpt_category' => false,	// Restrict to current post's categories
+		'crpt_taxes' => '',			// Restrict to custom taxonomies
+		'crpt_disable_contextual' => false,		// Disable contextual matching on all posts
+		'crpt_disable_contextual_cpt' => true,	// Disable contextual matching on custom post types only
 	);
 	return	array_merge( $more_options, $crp_settings );
 }
